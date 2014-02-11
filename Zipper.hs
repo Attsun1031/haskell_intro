@@ -1,6 +1,7 @@
 import Data.List (break)
+import Control.Monad
 
--- zipper for list
+{- zipper for list -}
 type ListZipper a = ([a], [a])
 
 goForward :: ListZipper a -> ListZipper a
@@ -19,17 +20,24 @@ data FSItem = File Name Data | Folder Name [FSItem] deriving (Show)
 data FSCrumb = FSCrumb Name [FSItem] [FSItem] deriving (Show)
 type FSZipper = (FSItem, [FSCrumb])
 
-fsUp :: FSZipper -> FSZipper
-fsUp (item, FSCrumb name ls rs:crumbs) = (Folder name (ls ++ item:rs), crumbs)
+fsUp :: FSZipper -> Maybe FSZipper
+fsUp (item, FSCrumb name ls rs:crumbs) = Just (Folder name (ls ++ item:rs), crumbs)
+fsUp (item, []) = Nothing
 
-fsTo :: Name -> FSZipper -> FSZipper
-fsTo toName (Folder name items, crumbs) =
-  let (ls, item:rs) = break (nameIs toName) items
-  in (item, FSCrumb name ls rs:crumbs)
+fsTo :: Name -> FSZipper -> Maybe FSZipper
+fsTo toName (Folder name items, crumbs)
+  | hasName toName items == True =
+    let (ls, item:rs) = break (nameIs toName) items
+    in Just (item, FSCrumb name ls rs:crumbs)
+  | otherwise = Nothing
 
 nameIs :: Name -> FSItem -> Bool
 nameIs name (Folder fname _) = name == fname
 nameIs name (File fname _) = name == fname
+
+hasName :: Name -> [FSItem] -> Bool
+hasName name items = any (nameIs name) items
+
 
 -- sample data
 myDisk :: FSItem
